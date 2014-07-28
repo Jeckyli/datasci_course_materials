@@ -5,14 +5,17 @@ import sys
 mr = MapReduce.MapReduce()
 
 def mapper(record):
-    # key: word in book content
-    # value: document id
-    words = record[1].split()
-    for w in words:
-      mr.emit_intermediate(w, record[0])
+    mr.emit_intermediate(record[0], record[1])
+    mr.emit_intermediate(record[1], record[0])
 
 def reducer(key, list_of_values):
-    mr.emit((key, list(set(list_of_values))))
+    b_count = {}
+    for b in list_of_values:
+        b_count.setdefault(b, 0)
+        b_count[b] += 1
+    for b in b_count:
+        if b_count[b] == 1:
+            mr.emit((key, b))
 
 # Do not modify below this line
 # =============================

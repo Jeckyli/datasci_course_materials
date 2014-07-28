@@ -5,14 +5,13 @@ import sys
 mr = MapReduce.MapReduce()
 
 def mapper(record):
-    # key: word in book content
-    # value: document id
-    words = record[1].split()
-    for w in words:
-      mr.emit_intermediate(w, record[0])
+    mr.emit_intermediate(record[1], record)
 
 def reducer(key, list_of_values):
-    mr.emit((key, list(set(list_of_values))))
+    for order in list_of_values:
+        for item in list_of_values:
+            if(order[0] == "order" and item[0] == "line_item"):
+                mr.emit(order+item)
 
 # Do not modify below this line
 # =============================
