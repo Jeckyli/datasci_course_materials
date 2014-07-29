@@ -5,17 +5,22 @@ import sys
 mr = MapReduce.MapReduce()
 
 def mapper(record):
-    for a in record:
-        if (a[0] == "a"):
-            mr.emit_intermediate(a[1],i), (a[2], a[3])
-        sum = 0;
-        for b in record:
-            if(a[0] == "a" and b[0] == "b" and a[2] == b[1]):
-                sum +=
-        ((a[1], b[2]), a)        
+    if (record[0] == "a"):
+        for i in range(0, 5):
+            mr.emit_intermediate((record[1],i), (record[2], record[3]))
+    if (record[0] == "b"):
+        for j in range(0, 5):
+            mr.emit_intermediate((j,record[2]), (record[1], record[3]))
 
 def reducer(key, list_of_values):
-    mr.emit(key)
+    temp = {};
+    value = 0;
+    for item in list_of_values:
+         temp.setdefault(item[0], 1)
+         if(temp[item[0]] != 1):
+             value += temp[item[0]] * item[1]
+         temp[item[0]] *= item[1]
+    mr.emit((key[0], key[1] , value))
 
 # Do not modify below this line
 # =============================
