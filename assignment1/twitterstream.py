@@ -1,5 +1,8 @@
 import oauth2 as oauth
 import urllib2 as urllib
+import csv
+import re
+import json
 
 # See assignment1.html instructions or README for how to get these credentials
 
@@ -57,5 +60,38 @@ def fetchsamples():
 	for line in response:
 		print line.strip()
 
+def parse_users(input_file):
+	user_list = []
+	with open(input_file, 'rb') as csv_input:
+		reader = csv.reader(csv_input)
+		for row in reader:
+			user = re.search('https://twitter.com/(.*)', row[0])
+			user_list.append(user.group(1))
+	return user_list		
+	
+def fetchTweets(users):
+	url = "https://api.twitter.com/1.1/statuses/user_timeline.json"
+	parameters = {}
+	for user in users:
+		parameters['screen_name'] = user
+		response = twitterreq(url, "GET", parameters)
+		line = response.read()
+		tweets = json.loads(line)
+		output_file = user+'.csv'
+		fieldnames = ['text', 'Time', '@']
+		with open(output_file, 'wb') as csv_output:
+			writer = csv.writer(csv_output, delimiter='\t')
+			for tweet in tweets:
+				row = (
+		        	tweet['id'],                    # tweet_id
+		            tweet['created_at'],            # tweet_time
+		            tweet['user']['screen_name'],   # tweet_author
+		            tweet['user']['id_str'],        # tweet_authod_id
+		            tweet['text']                   # tweet_text
+		        )
+				values = [(value.encode('utf8') if hasattr(value, 'encode') else value) for value in row]
+				writer.writerow(values)
+			
 if __name__ == '__main__':
-	fetchsamples()
+	users = parse_users('sample.csv')
+	fetchTweets(users)
