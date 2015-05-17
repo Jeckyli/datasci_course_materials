@@ -3,7 +3,8 @@ import urllib2 as urllib
 import csv
 import re
 import json
-
+import collections
+import simplejson
 # See assignment1.html instructions or README for how to get these credentials
 
 api_key = "qLobLu6KzPlu4C5b7mCFshvzx"
@@ -23,6 +24,33 @@ http_method = "GET"
 
 http_handler	= urllib.HTTPHandler(debuglevel=_debug)
 https_handler = urllib.HTTPSHandler(debuglevel=_debug)
+
+
+def _decode_list(data):
+    rv = []
+    for item in data:
+        if isinstance(item, unicode):
+            item = item.encode('utf-8')
+        elif isinstance(item, list):
+            item = _decode_list(item)
+        elif isinstance(item, dict):
+            item = _decode_dict(item)
+        rv.append(item)
+    return rv
+
+def _decode_dict(data):
+    rv = {}
+    for key, value in data.iteritems():
+        if isinstance(key, unicode):
+            key = key.encode('utf-8')
+        if isinstance(value, unicode):
+            value = value.encode('utf-8')
+        elif isinstance(value, list):
+            value = _decode_list(value)
+        elif isinstance(value, dict):
+            value = _decode_dict(value)
+        rv[key] = value
+    return rv
 
 '''
 Construct, sign, and open a twitter request
@@ -71,26 +99,25 @@ def parse_users(input_file):
 	
 def fetchTweets(users):
 	url = "https://api.twitter.com/1.1/statuses/user_timeline.json"
+# 	url = "https://twitter.com/search?src=typd&q=from%3Aoracle%20since%3A2015-04-01%20until%3A2015-05-01"
+	
 	parameters = {}
+	since_date = "2015-04-01"
+	until_date = "2015-05-01"
 	for user in users:
-		parameters['screen_name'] = user
-		response = twitterreq(url, "GET", parameters)
+		url_search = "https://api.twitter.com/1.1/search/tweets.json"
+		parameters['q'] = "from:" + user + " since:" + since_date + " until:" + until_date
+		response = twitterreq(url_search, "GET", parameters)
 		line = response.read()
-		tweets = json.loads(line)
+		tweets = json.loads(line, object_hook=_decode_dict)
 		output_file = user+'.csv'
-		fieldnames = ['text', 'Time', '@']
+		fieldnames = ('text', 'created_at', 'in_reply_to_screen_name')
 		with open(output_file, 'wb') as csv_output:
-			writer = csv.writer(csv_output, delimiter='\t')
+			writer = csv.DictWriter(csv_output, fieldnames=fieldnames)
+			writer.writeheader()
 			for tweet in tweets:
-				row = (
-		        	tweet['id'],                    # tweet_id
-		            tweet['created_at'],            # tweet_time
-		            tweet['user']['screen_name'],   # tweet_author
-		            tweet['user']['id_str'],        # tweet_authod_id
-		            tweet['text']                   # tweet_text
-		        )
-				values = [(value.encode('utf8') if hasattr(value, 'encode') else value) for value in row]
-				writer.writerow(values)
+				tweet = {k: tweet[k] for k in fieldnames}
+				writer.writerow(tweet)
 			
 if __name__ == '__main__':
 	users = parse_users('sample.csv')
